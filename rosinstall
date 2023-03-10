@@ -11,6 +11,10 @@
     uri: https://github.com/jsk-ros-pkg/jsk_recognition.git
     version: master
 - git:
+    local-name: jsk-ros-pkg/jsk_pr2eus
+    uri: https://github.com/jsk-ros-pkg/jsk_pr2eus.git
+    version: master
+- git:
     local-name: kinova_imitation_ros
     uri: https://github.com/ojh6404/kinova_imitation_ros
     version: master

@@ -1,0 +1,4 @@
+[submodule "kinova_imitation_fg/node_scripts/fg_libs/yolo7"]
+	path = kinova_imitation_fg/node_scripts/fg_libs/yolo7
+	url = https://github.com/RizwanMunawar/yolov7-segmentation
+	branch = 87b016c

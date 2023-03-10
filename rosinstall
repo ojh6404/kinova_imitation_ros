@@ -1,0 +1,43 @@
+- git:
+    local-name: dynamic_reconfigure
+    uri: https://github.com/ros/dynamic_reconfigure.git
+    version: 1.6.3
+- git:
+    local-name: jsk-ros-pkg/jsk_common
+    uri: https://github.com/jsk-ros-pkg/jsk_common.git
+    version: master
+- git:
+    local-name: jsk-ros-pkg/jsk_recognition
+    uri: https://github.com/jsk-ros-pkg/jsk_recognition.git
+    version: master
+- git:
+    local-name: kinova_imitation_ros
+    uri: https://github.com/ojh6404/kinova_imitation_ros
+    version: master
+- git:
+    local-name: ros-perception/image_transport_plugins
+    uri: https://github.com/ros-perception/image_transport_plugins.git
+    version: noetic-devel
+- git:
+    local-name: ros-perception/opencv_apps
+    uri: https://github.com/ros-perception/opencv_apps.git
+- git:
+    local-name: jsk_robot
+    uri: https://github.com/ojh6404/jsk_robot.git
+    version: kinova-noetic-devel
+- git:
+    local-name: ros_kortex
+    uri: https://github.com/Kinovarobotics/ros_kortex
+    version: noetic-devel
+- git:
+    local-name: ros_kortex_vision
+    uri: https://github.com/Kinovarobotics/ros_kortex_vision
+    version: master
+- git:
+    local-name: vision_opencv
+    uri: https://github.com/ros-perception/vision_opencv.git
+    version: noetic
+- git:
+    local-name: freenect_stack
+    uri: https://github.com/ros-drivers/freenect_stack.git
+    version: master

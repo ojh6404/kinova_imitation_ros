@@ -1,0 +1,46 @@
+<launch>
+
+  <arg name="gui" default="true" />
+  <arg name="device" default="0" />
+  <arg name="input_image" default="/usb_cam/image_raw" />
+
+  <include file="$(find fg_ros)/sample/sample_foreground_detection.launch" >
+    <arg name="device" value="-1" />
+  </include>
+
+  <node name="clip_classifier"
+        pkg="kinova_imitation_perception" type="clip_classifier.py"
+        output="screen" clear_params="true" >
+    <remap from="~input" to="$(arg input_image)" />
+    <remap from="~input/segmentation" to="/fg_node/output/label_ins" />
+    <rosparam subst_value="true" >
+      model_path: $(find kinova_imitation_perception)/trained_data/clip/2023-03-05.pth
+      approximate_sync: false
+      queue_size: 30
+      device: $(arg device)
+    </rosparam>
+  </node>
+
+  <node name="draw_rects_for_clip"
+        pkg="jsk_perception" type="draw_rects.py"
+        output="screen"
+        clear_params="true" >
+    <remap from="~input" to="$(arg input_image)" />
+    <remap from="~input/rects" to="/clip_classifier/output/rects" />
+    <remap from="~input/class" to="/clip_classifier/output/class" />
+    <rosparam subst_value="true">
+      font_path: $(find jsk_recognition_utils)/font_data/NotoSansJP-Regular.otf
+      use_classification_result: true
+      label_size: 16
+      queue_size: 100
+    </rosparam>
+  </node>
+
+  <group if="$(arg gui)" >
+    <node name="image_view01"
+          pkg="image_view" type="image_view">
+      <remap from="image" to="draw_rects_for_clip/output" />
+    </node>
+  </group>
+
+</launch>

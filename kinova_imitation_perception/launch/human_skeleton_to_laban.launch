@@ -1,18 +1,9 @@
 <launch>
 
-  <!-- <arg name="ns" default="hsrb" /> -->
-  <!-- <arg name="input_image" default="/$(arg ns)/head_rgbd_sensor/rgb/image_rect_color" /> -->
-  <!-- <arg name="input_info" default="/$(arg ns)/head_rgbd_sensor/rgb/camera_info" /> -->
-  <!-- <arg name="input_depth" default="/$(arg ns)/head_rgbd_sensor/depth_registered/image_rect_raw" /> -->
-  <!-- <arg name="gui" default="true" /> -->
-
   <arg name="ns" default="camera" />
-  <!-- <arg name="input_image" default="/$(arg ns)/color/image_rect_color" /> -->
-  <!-- <arg name="input_info" default="/$(arg ns)/color/camera_info" /> -->
-  <!-- <arg name="input_depth" default="/$(arg ns)/depth/depth_registered/sw_registed/image_rect_raw" /> -->
   <arg name="input_image" default="/$(arg ns)/rgb/image_rect_color" />
   <arg name="input_info" default="/$(arg ns)/rgb/camera_info" />
-  <arg name="input_depth" default="/$(arg ns)/depth_registered/sw_registed/image_rect_raw" />
+  <arg name="input_depth" default="/$(arg ns)/depth_registered/sw_registered/image_rect_raw" />
   <arg name="gui" default="true" />
 
   <node name="people_pose_estimation"
@@ -44,7 +35,7 @@
   <group if="$(arg gui)" >
     <node name="rviz"
           pkg="rviz" type="rviz"
-          args="-d $(find kinova_imitation_perception)/sample/config/people_pose_estimation_2d.rviz">
+          args="-d $(find kinova_imitation_perception)/sample/config/pose_estimation_xtion.rviz">
     </node>
   </group>
 

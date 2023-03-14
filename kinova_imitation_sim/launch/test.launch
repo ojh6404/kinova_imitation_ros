@@ -1,0 +1,21 @@
+<launch>
+
+    <!-- Arguments -->
+    <arg name="arm" default="gen3"/>
+    <arg name="robot_name" default="arm_gen3"/>
+    <arg name="gripper" default="robotiq_2f_140"/>
+    <arg name="cyclic_data_publish_rate" default="40"/> <!--Hz-->
+    <arg name="start_rviz" default="true" />
+    <!-- <param name="cyclic_data_publish_rate" value="$(arg cyclic_data_publish_rate)"/> -->
+
+    <!-- Launch Gazebo for simulation -->
+    <include file="$(find kortex_gazebo)/launch/spawn_kortex_robot.launch">
+        <arg name="arm" value="$(arg arm)" />
+        <arg name="robot_name" value="$(arg robot_name)" />
+        <arg name="gripper" value="$(arg gripper)" />
+        <arg name="start_rviz" value="false" />
+
+    </include>
+
+    <node name="rviz" pkg="rviz" type="rviz" if="$(arg start_rviz)" args="-d $(find kinova_imitation_sim)/config/sim.rviz" ns="/arm_gen3/" />
+</launch>

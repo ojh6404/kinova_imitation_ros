@@ -1,0 +1,29 @@
+<package>
+  <name>kinova_imitation_sim</name>
+  <version>0.1.0</version>
+  <description>
+    <p>Simulation package for Kortex robots</p>
+  </description>
+  <maintainer email="oh@jsk.imi.i.u-tokyo.ac.jp">Jihoon Oh</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roslaunch</build_depend>
+  <run_depend>kortex_control</run_depend>
+  <run_depend>kortex_driver</run_depend>
+  <run_depend>robot_state_publisher</run_depend>
+  <run_depend>rviz</run_depend>
+  <run_depend>joint_state_publisher</run_depend>
+  <run_depend>gazebo</run_depend>
+  <run_depend>xacro</run_depend>
+  <run_depend>gazebo_ros</run_depend>
+  <run_depend>gazebo_ros_control</run_depend>
+  <run_depend>moveit_commander</run_depend>
+  <run_depend>moveit_ros_control_interface</run_depend>
+  <run_depend>moveit_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>std_srvs</run_depend>
+  <export>
+    <gazebo_ros gazebo_media_path="${prefix}"/>
+    <architecture_independent />
+  </export>
+</package>

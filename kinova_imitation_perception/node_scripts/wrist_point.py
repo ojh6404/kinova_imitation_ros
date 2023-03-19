@@ -4,15 +4,11 @@
 from __future__ import division
 from __future__ import print_function
 
-import cv_bridge
-from image_geometry import PinholeCameraModel
-from jsk_recognition_msgs.msg import HumanSkeleton
 from jsk_recognition_msgs.msg import HumanSkeletonArray
 from jsk_topic_tools import ConnectionBasedTransport
 import numpy as np
 import rospy
 from geometry_msgs.msg import PointStamped
-from geometry_msgs.msg import PoseStamped
 
 
 class WristPoint(ConnectionBasedTransport):

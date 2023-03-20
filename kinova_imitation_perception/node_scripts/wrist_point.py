@@ -4,10 +4,11 @@
 from __future__ import division
 from __future__ import print_function
 
-from jsk_recognition_msgs.msg import HumanSkeletonArray
-from jsk_topic_tools import ConnectionBasedTransport
 import numpy as np
 import rospy
+
+from jsk_recognition_msgs.msg import HumanSkeletonArray
+from jsk_topic_tools import ConnectionBasedTransport
 from geometry_msgs.msg import PointStamped
 
 
@@ -21,10 +22,9 @@ class WristPoint(ConnectionBasedTransport):
 
         self.point_offset = [0.0, 0.0, 0.5]
 
-        self.point_queue_size = 10  # 30 Hz
-        self.wrist_point_array = np.array(
-            [0.0] * self.point_queue_size, dtype=np.float32
-        )
+        self.point_queue_size = 30  # 30 Hz
+        self.wrist_point = np.zeros(3, dtype=np.float32)
+        self.wrist_point_queue = np.zeros((3, self.point_queue_size), dtype=np.float32)
 
     def subscribe(self):
         queue_size = rospy.get_param("~queue_size", 10)
@@ -42,7 +42,9 @@ class WristPoint(ConnectionBasedTransport):
 
     def callback(self, skeleton_array_msg: HumanSkeletonArray):
         try:
-            skeleton = skeleton_array_msg.skeletons[0]
+            skeleton = skeleton_array_msg.skeletons[
+                0
+            ]  # TODO : what if multiple people?
 
             bones = skeleton.bones
             bone_names = skeleton.bone_names
@@ -67,20 +69,59 @@ class WristPoint(ConnectionBasedTransport):
                 right_elbow_end_y = bones[right_arm_bones_index[1]].end_point.y
                 right_elbow_end_z = bones[right_arm_bones_index[1]].end_point.z
 
-                self.wrist_point_msg = PointStamped(header=skeleton_array_msg.header)
-                self.wrist_point_msg.point.x = self.point_offset[0] - (
+                # zxy to xyz with offset
+                self.wrist_point[0] = self.point_offset[0] - (
                     right_elbow_end_z - right_shoulder_start_z
                 )
-                self.wrist_point_msg.point.y = self.point_offset[1] - (
+                self.wrist_point[1] = self.point_offset[1] - (
                     right_elbow_end_x - right_shoulder_start_x
                 )
-                self.wrist_point_msg.point.z = self.point_offset[2] - (
+                self.wrist_point[2] = self.point_offset[2] - (
                     right_elbow_end_y - right_shoulder_start_y
                 )
 
+                # IQR outlier remove
+                # for i in range(3):
+                # q25, q75 = np.quantile(self.wrist_point[i], 0.25), np.quantile(
+                #     self.wrist_point[i], 0.75
+                # )
+                # iqr = q75 - q25
+                # cutoff = iqr * 1.5
+                # lower, upper = q25 -cut_off, q75 + cut_off
+                # if self.wrist_point[i] < lower or self.wrist_point[i] > upper:
+                #     return
+
+                # detect outlier
+                outlier = np.abs(self.wrist_point - self.wrist_point_queue[:, -1]) > 0.3
+                if np.all(outlier):
+                    print(
+                        "outlier",
+                        outlier,
+                        "\t delta",
+                        self.wrist_point - self.wrist_point_queue[:, -1],
+                    )
+                else:
+                    # fill wrist point queue queue
+                    self.wrist_point_queue[:, :-1] = self.wrist_point_queue[:, 1:]
+                    self.wrist_point_queue[:, -1] = self.wrist_point
+
+                    # prepare message
+                    self.wrist_point_msg = PointStamped(
+                        header=skeleton_array_msg.header
+                    )
+                    # raw data (no moving average)
+                    # self.wrist_point_msg.point.x = self.wrist_point[0]
+                    # self.wrist_point_msg.point.y = self.wrist_point[1]
+                    # self.wrist_point_msg.point.z = self.wrist_point[2]
+
+                    # processed data (moving average)
+                    self.wrist_point_msg.point.x = np.mean(self.wrist_point_queue[0])
+                    self.wrist_point_msg.point.y = np.mean(self.wrist_point_queue[1])
+                    self.wrist_point_msg.point.z = np.mean(self.wrist_point_queue[2])
+
             else:
-                pass
                 # print("no bone detected")
+                pass
 
             self.wrist_point_pub.publish(self.wrist_point_msg)
         except:

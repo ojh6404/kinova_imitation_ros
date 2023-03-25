@@ -29,7 +29,7 @@ class WristPoint(ConnectionBasedTransport):
     def subscribe(self):
         queue_size = rospy.get_param("~queue_size", 10)
         sub_skeleton = rospy.Subscriber(
-            "/skeleton_with_depth/output/pose",
+            "~input/skeleton_with_depth/output/pose",
             HumanSkeletonArray,
             self.callback,
             queue_size=queue_size,
@@ -100,6 +100,7 @@ class WristPoint(ConnectionBasedTransport):
                         "\t delta",
                         self.wrist_point - self.wrist_point_queue[:, -1],
                     )
+                    pass
                 else:
                     # fill wrist point queue queue
                     self.wrist_point_queue[:, :-1] = self.wrist_point_queue[:, 1:]
@@ -120,15 +121,15 @@ class WristPoint(ConnectionBasedTransport):
                     self.wrist_point_msg.point.z = np.mean(self.wrist_point_queue[2])
 
             else:
-                # print("no bone detected")
+                rospy.logwarn("Wrist point not detected")
                 pass
 
             self.wrist_point_pub.publish(self.wrist_point_msg)
         except:
-            print("no human detected")
+            rospy.logwarn("Skeleton not detected")
 
 
 if __name__ == "__main__":
-    rospy.init_node("wrist_pose_node")
+    rospy.init_node("wrist_point")
     WristPoint()
     rospy.spin()

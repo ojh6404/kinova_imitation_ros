@@ -3,6 +3,9 @@
 #include "std_msgs/Float64.h"
 #include "geometry_msgs/PointStamped.h"
 #include "sensor_msgs/JointState.h"
+#include "kortex_driver/Base_JointSpeeds.h"
+#include "kortex_driver/JointSpeed.h"
+#include "kortex_driver/BaseCyclic_Feedback.h"
 #include <ros/package.h>
 
 #include <iostream>
@@ -26,22 +29,48 @@
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
 
+#define rad2deg(a) ((a)/M_PI * 180.0)
+#define deg2rad(a) ((a)/180.0 * M_PI)
 
 const int Joints = 7;
 KDL::JntArray jnt_pos_start(Joints);
-const int loop_rate_val = 100;
+const int loop_rate_val = 50;
 
 geometry_msgs::PointStamped wrist_point_global;
 sensor_msgs::JointState joint_state_global;
+std::array<float, 3> rpy;
+//kortex_driver::BaseCyclic_Feedback base_feedback_global;
+
 
 //void cb_wrist_point(const geometry_msgs::PointStamped::ConstPtr & wrist_point) {
 //
 //    wrist_point_global = wrist_point->point[0];
 //}
 
+void cb_base_feedback(const kortex_driver::BaseCyclic_Feedback::ConstPtr & base_feedback) {
+//    for (int i = 0; i < 7; ++i) {
+//        base_feedback_global.actuators.data(i)->position = base_feedback->actuators.data(i)->position;
+//    }
+//    for (int i = 0; i < Joints; ++i) {
+////        base_feedback_global.actuators[i].position. = base_feedback->actuators[i].position;
+//        std::cout << i << "th joint pos : " << base_feedback->actuators[i].position << std::endl;
+//    }
+
+    rpy[0] = deg2rad(base_feedback->base.tool_pose_theta_x);
+    rpy[1] = deg2rad(base_feedback->base.tool_pose_theta_y);
+    rpy[2] = deg2rad(base_feedback->base.tool_pose_theta_z);
+
+//    for (int i = 0; i < 3; ++i) {
+//        std::cout << i << "th rpy : " << rpy[i] << std::endl;
+//    }
+
+//    std::cout << base_feedback->actuators.data()->position << std::endl;
+}
+
 void cb_joint_state(const sensor_msgs::JointState::ConstPtr & joint_state) {
     for (int i = 0; i < Joints; ++i) {
-        jnt_pos_start(i) = joint_state->position[i];
+        jnt_pos_start(i) = joint_state->position[i+1];
+//        std::cout << i << "th joint : " << joint_state->position[i];
     }
 }
 
@@ -91,6 +120,7 @@ int main(int argc, char** argv) {
     //Create subscribers for all joint states
 //    ros::Subscriber sub_wrist_point = n.subscribe("/wrist_point/output/wrist_point", 10, cb_wrist_point);
     ros::Subscriber sub_joint_states = n.subscribe("/arm_gen3/joint_states", 10, cb_joint_state);
+    ros::Subscriber sub_base_feedback = n.subscribe("/arm_gen3/base_feedback", 10, cb_base_feedback);
 
     //Create publishers to send position commands to all joints
 //    ros::Publisher pub_joint_vel = n.advertise<std_msgs::Float64>("/shoulder_pan_joint_position_controller/command", 1000);
@@ -98,16 +128,7 @@ int main(int argc, char** argv) {
     sensor_msgs::JointState test_joint_state;
 
     //Create publishers to send position commands to all joints
-    ros::Publisher joint_com_pub[7];
-    joint_com_pub[0] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_1_position_controller/command", 1000);
-    joint_com_pub[1] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_2_position_controller/command", 1000);
-    joint_com_pub[2] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_3_position_controller/command", 1000);
-    joint_com_pub[3] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_4_position_controller/command", 1000);
-    joint_com_pub[4] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_5_position_controller/command", 1000);
-    joint_com_pub[5] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_6_position_controller/command", 1000);
-    joint_com_pub[6] = n.advertise<std_msgs::Float64>("/arm_gen3/joint_7_position_controller/command", 1000);
-
-
+    ros::Publisher pub_joint_vel = n.advertise<kortex_driver::Base_JointSpeeds>("/arm_gen3/in/joint_velocity", 10);
 
 
     //Parse urdf model and generate KDL tree
@@ -119,57 +140,125 @@ int main(int argc, char** argv) {
 
     //Generate a kinematic chain from the robot base to its tcp
     KDL::Chain kinova_gen3_arm_chain;
-    kinova_gen3_arm_tree.getChain("base_link", "end_effector_link", kinova_gen3_arm_chain);
+//    kinova_gen3_arm_tree.getChain("base_link", "end_effector_link", kinova_gen3_arm_chain);
+    kinova_gen3_arm_tree.getChain("base_link", "kinova_grip_site", kinova_gen3_arm_chain);
+
 
     //Create solvers
     KDL::ChainFkSolverPos_recursive fk_solver(kinova_gen3_arm_chain);
-    KDL::ChainIkSolverVel_pinv vel_ik_solver(kinova_gen3_arm_chain, 0.0001, 1000);
-    KDL::ChainIkSolverPos_NR ik_solver(kinova_gen3_arm_chain, fk_solver, vel_ik_solver, 1000);
+    KDL::ChainIkSolverVel_pinv vel_ik_solver(kinova_gen3_arm_chain, 0.0001, 100);
+    KDL::ChainIkSolverPos_NR ik_solver(kinova_gen3_arm_chain, fk_solver, vel_ik_solver, 100);
 
+    unsigned int nj = kinova_gen3_arm_chain.getNrOfJoints();
+
+    unsigned int ns = kinova_gen3_arm_chain.getNrOfSegments();
+
+    std::cout << "nj : " << nj << "\tns : " << ns << std::endl;
 
     const float t_step = 1/((float)loop_rate_val);
     int count = 0;
 
+    kortex_driver::Base_JointSpeeds base_jointspeeds_msg;
+    kortex_driver::JointSpeed joint_speed_msg;
+
+    std::vector<float> target_joint_pos;
+//    std::vector<float> init_joint_pos = {0.0, 0.26, 3.14, -2.27, 0.0, 0.95, 1.57};
+    KDL::JntArray init_joint_pos(Joints);
+    init_joint_pos(0) = 0.0;
+    init_joint_pos(1) = 0.26;
+    init_joint_pos(2) = 3.14;
+    init_joint_pos(3) = -2.27;
+    init_joint_pos(4) = 0.0;
+    init_joint_pos(5) = 0.95;
+    init_joint_pos(6) = 1.57;
+
+    for (int i = 0; i < nj; ++i) {
+        target_joint_pos.push_back(0.0);
+    }
+
+    double roll, pitch, yaw;
+
+    KDL::Frame init_tcp_pos;
+    fk_solver.JntToCart(init_joint_pos, init_tcp_pos);
+
+    for (int i = 0; i < 3; ++i) {
+        std::cout << i << "th cartesian pos" << init_tcp_pos.p(i) << std::endl;
+    }
+
+    init_tcp_pos.M.GetRPY(roll,pitch,yaw);
+
+    std::cout << "roll : " << roll << "\tpitch : " << pitch << "\tyaw : " << yaw << std::endl;
+
+    KDL::Vector target_cartesian_vec(0.3, 0.1, 0.2);
+    KDL::Frame target_cartesian_pose(init_tcp_pos.M,target_cartesian_vec);
+    KDL::JntArray target_jnt_pos(Joints);
+    ik_solver.CartToJnt(init_joint_pos, target_cartesian_pose, target_jnt_pos);
+
+
 
     while (ros::ok()) {
+
+
+//        std::cout << "start" << std::endl;
+//        for (int i = 0; i < nj; ++i) {
+//            std::cout << i << "th joint : " << jnt_pos_start(i) << std::endl;
+//
+//        }
+//        std::cout << "end" << std::endl;
+
         KDL::Frame tcp_pos_start;
         fk_solver.JntToCart(jnt_pos_start, tcp_pos_start);
 
-        ROS_INFO("Current tcp Position/Twist KDL:");
-        ROS_INFO("Position: %f %f %f", tcp_pos_start.p(0), tcp_pos_start.p(1), tcp_pos_start.p(2));
-        ROS_INFO("Orientation: %f %f %f", tcp_pos_start.M(0,0), tcp_pos_start.M(1,0), tcp_pos_start.M(2,0));
+//        for (int i = 0; i < 3; ++i) {
+//            std::cout << i << "th : " << tcp_pos_start.p(i) << std::endl;
+//        }
 
-        float t_max;
-        KDL::Vector vec_tcp_pos_goal(0.0, 0.0, 0.0);
-        get_goal_tcp_and_time(tcp_pos_start, &vec_tcp_pos_goal, &t_max);
+        KDL::Vector vec_tcp_pos_goal(0.3, 0.1, 0.2);
+//        tcp_pos_start.M.RPY(90.0,0,90.0);
 
-        KDL::Frame tcp_pos_goal(tcp_pos_start.M, vec_tcp_pos_goal);
+        KDL::Frame tcp_pos_goal(KDL::Rotation::RPY(roll, pitch, yaw), vec_tcp_pos_goal);
+
 
         KDL::JntArray jnt_pos_goal(Joints);
-        ik_solver.CartToJnt(jnt_pos_start, tcp_pos_goal, jnt_pos_goal);
+        ik_solver.CartToJnt(jnt_pos_start, tcp_pos_goal,jnt_pos_goal);
 
-        float t = 0.0;
+
+
+//        for (int i = 0; i < 9; ++i) {
+//            std::cout << tcp_pos_start.M.data[i] << std::endl;
+//        }
+
+
+//        std::cout << "start" << std::endl;
+//        for (int i = 0; i < Joints; ++i) {
+////            std::cout << jnt_pos_goal(i) << std::endl;
+//            target_joint_pos[i] = jnt_pos_goal(i);
+//        }
+//        std::cout << "end" << std::endl;
 
         for (int i = 0; i < Joints; ++i) {
-            std::cout << jnt_pos_goal(i) << std::endl;
+            target_joint_pos[i] = target_jnt_pos(i);
         }
 
-        while(t<t_max) {
-            std_msgs::Float64 position[7];
-            //Compute next position step for all joints
-            for(int i=0; i<Joints; i++) {
-                position[i].data = compute_linear(jnt_pos_start(i), jnt_pos_goal(i), t, t_max);
-                joint_com_pub[i].publish(position[i]);
-            }
 
-            ros::spinOnce();
-            loop_rate.sleep();
-            ++count;
-            t += t_step;
+        base_jointspeeds_msg.joint_speeds.clear();
+        for (int i = 0; i < 7; ++i) {
+            joint_speed_msg.joint_identifier = i;
+            joint_speed_msg.duration = 0;
+//            joint_speed_msg.value = 0.0f;
+            joint_speed_msg.value = target_joint_pos[i] - jnt_pos_start(i);
+//            joint_speed_msg.value = - jnt_pos_start(i);
+//            joint_speed_msg.value = init_joint_pos(i) - jnt_pos_start(i);
+            base_jointspeeds_msg.joint_speeds.push_back(joint_speed_msg);
         }
-//
-//        ros::spinOnce();
-//        loop_rate.sleep();
+
+
+
+        pub_joint_vel.publish(base_jointspeeds_msg);
+
+
+        ros::spinOnce();
+        loop_rate.sleep();
 
 
     }

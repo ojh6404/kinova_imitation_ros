@@ -34,3 +34,6 @@
 
 # collected data
 kinova_imitation_demo/data
+
+# IDE
+*.idea

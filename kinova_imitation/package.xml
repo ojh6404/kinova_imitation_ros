@@ -12,9 +12,10 @@
 
   <exec_depend>kinova_imitation_common</exec_depend>
   <exec_depend>kinova_imitation_msgs</exec_depend>
-  <exec_depend>kinova_imitation_demo</exec_depend>
   <exec_depend>kinova_imitation_perception</exec_depend>
-  <exec_depend>kinova_motor_control</exec_depend>
+  <exec_depend>kinova_teleop</exec_depend>
+  <!-- <exec_depend>kinova_imitation_demo</exec_depend> -->
+  <!-- <exec_depend>kinova_motor_control</exec_depend> -->
 
   <export>
     <metapackage/>

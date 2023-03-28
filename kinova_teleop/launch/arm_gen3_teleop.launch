@@ -1,0 +1,14 @@
+<launch>
+
+    <!-- Robot namespace -->
+    <arg name="robot_name" default="arm_gen3"/>
+
+    <!-- Launch the example in that namespace -->
+    <node name="velocity_control_with_ik" pkg="kinova_teleop" type="velocity_control_with_ik" output="screen">
+        <param name="robot_name" value="$(arg robot_name)"/>
+    </node>
+    <node name="gripper_command" pkg="kinova_teleop" type="gripper_command" output="screen">
+        <param name="robot_name" value="$(arg robot_name)"/>
+    </node>
+
+</launch>
